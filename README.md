@@ -65,7 +65,7 @@ No default account or payment details are needed. If today's shows have finished
 ### Quick start
 
 ```bash
-git clone https://github.com/vedantgour206-netizen/IMovies.git
+git clone https://github.com/vedantgour206/IMovies.git
 cd IMovies
 npm ci
 npm run dev
@@ -244,7 +244,7 @@ Poster artwork is rendered locally in CSS. Google Fonts enhances the typography 
 
 Want to extend the experience? Good next steps include an admin dashboard, expiring seat holds, automated show scheduling, and an accessible ticket export. Start with a focused change, keep the reservation rules on the server, and run the integration test and build before opening a pull request.
 
-Found a bug or have an idea? [Open an issue](https://github.com/vedantgour206-netizen/IMovies/issues) with the steps to reproduce it or a short description of the improvement.
+Found a bug or have an idea? [Open an issue](https://github.com/vedantgour206/IMovies/issues) with the steps to reproduce it or a short description of the improvement.
 
 ---
 
@@ -252,7 +252,7 @@ Found a bug or have an idea? [Open an issue](https://github.com/vedantgour206-ne
 
 **Your next great escape starts with a seat.**
 
-[Explore the code](https://github.com/vedantgour206-netizen/IMovies) · [Report an issue](https://github.com/vedantgour206-netizen/IMovies/issues)
+[Explore the code](https://github.com/vedantgour206/IMovies) · [Report an issue](https://github.com/vedantgour206/IMovies/issues)
 
 <sub>If you enjoyed the project, a star is always appreciated.</sub>
 
