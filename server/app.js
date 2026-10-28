@@ -23,6 +23,9 @@ export function createApp(secret){
  app.get('/api/bookings',auth,wrap(async(q,s)=>s.json(await Booking.find({user:q.user}).populate({path:'show',populate:{path:'movie'}}).sort({createdAt:-1}))));
  app.post('/api/bookings',auth,wrap(async(q,s)=>{
   const {showId,seats}=q.body;if(!mongoose.isValidObjectId(showId)||!Array.isArray(seats)||!seats.length||seats.length>8||new Set(seats).size!==seats.length||seats.some(x=>typeof x!=='string'||! /^[A-H](?:[1-9]|10)$/.test(x)))return s.status(400).json({error:'Select between 1 and 8 valid seats.'});
+  const scheduled=await Show.findById(showId);
+  if(!scheduled)return s.status(404).json({error:'Show not found.'});
+  if(new Date(scheduled.date+'T'+scheduled.time+':00+05:30')<=new Date())return s.status(400).json({error:'This show has already started. Please choose a later showtime.'});
   const show=await Show.findOneAndUpdate({_id:showId,occupied:{$nin:seats}},{$addToSet:{occupied:{$each:seats}}},{new:true});
   if(!show)return s.status(409).json({error:'These seats were just booked. Please choose other seats.'});
   try{const booking=await Booking.create({user:q.user,show:show._id,seats,total:seats.length*show.price+Math.round(seats.length*show.price*0.08),reference:'IM-'+crypto.randomBytes(4).toString('hex').toUpperCase()});s.status(201).json(await booking.populate({path:'show',populate:{path:'movie'}}));}catch(e){await Show.updateOne({_id:showId},{$pull:{occupied:{$in:seats}}});throw e;}

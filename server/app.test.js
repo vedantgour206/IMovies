@@ -1,0 +1,35 @@
+import {test,before,after} from 'node:test';
+import assert from 'node:assert/strict';
+import mongoose from 'mongoose';
+import request from 'supertest';
+import {MongoMemoryServer} from 'mongodb-memory-server';
+import {createApp} from './app.js';
+import {seed} from './seed.js';
+import {User,Show} from './models.js';
+let mongo,app,auth,otherAuth,showId;
+before(async()=>{mongo=await MongoMemoryServer.create();await mongoose.connect(mongo.getUri());await seed();await User.init();app=createApp('test-only-secret-for-imovies-integration-tests');});
+after(async()=>{await mongoose.disconnect();await mongo?.stop();});
+test('complete reservation lifecycle, access control, and concurrent seat protection',async()=>{
+ const anonymous=await request(app).get('/api/bookings');assert.equal(anonymous.status,401);
+ const invalid=await request(app).post('/api/auth/register').send({name:'Alex',email:'invalid',password:'123'});assert.equal(invalid.status,400);
+ for(const email of ['alex@example.test','sam@example.test']){const res=await request(app).post('/api/auth/register').send({name:'Demo Guest',email,password:'test-password-123'});assert.equal(res.status,201);if(!auth)auth='Bearer '+res.body.token;else otherAuth='Bearer '+res.body.token;}
+ assert.equal((await request(app).post('/api/auth/login').send({email:'alex@example.test',password:'incorrect'})).status,401);
+ assert.equal((await request(app).post('/api/auth/login').send({email:'alex@example.test',password:'test-password-123'})).status,200);
+ assert.equal((await request(app).post('/api/auth/register').send({name:'Duplicate',email:'alex@example.test',password:'test-password-123'})).status,409);
+ const movies=await request(app).get('/api/movies');assert.equal(movies.body.length,6);
+ const date=new Date(Date.now()+86400000).toLocaleDateString('en-CA',{timeZone:'Asia/Kolkata'});
+ const shows=await request(app).get('/api/shows').query({movie:movies.body[0]._id,date});assert.equal(shows.body.length,4);showId=shows.body[0]._id;
+ const malformed=await request(app).post('/api/bookings').set('Authorization',auth).send({showId,seats:['Z99']});assert.equal(malformed.status,400);
+ const duplicate=await request(app).post('/api/bookings').set('Authorization',auth).send({showId,seats:['A1','A1']});assert.equal(duplicate.status,400);
+ const racing=await Promise.all([auth,otherAuth].map(a=>request(app).post('/api/bookings').set('Authorization',a).send({showId,seats:['A1','A2'],total:1})));
+ assert.deepEqual(racing.map(r=>r.status).sort(),[201,409]);const winner=racing.find(r=>r.status===201);const owner=racing[0].status===201?auth:otherAuth;const outsider=owner===auth?otherAuth:auth;
+ assert.equal(winner.body.total,475);assert.equal(winner.body.status,'confirmed');
+ assert.equal((await request(app).get('/api/bookings').set('Authorization',outsider)).body.length,0);
+ assert.equal((await request(app).patch('/api/bookings/'+winner.body._id+'/cancel').set('Authorization',outsider)).status,404);
+ const list=await request(app).get('/api/bookings').set('Authorization',owner);assert.equal(list.body[0].show.movie.title,movies.body[0].title);
+ assert.equal((await request(app).patch('/api/bookings/'+winner.body._id+'/cancel').set('Authorization',owner)).status,200);
+ assert.equal((await request(app).patch('/api/bookings/'+winner.body._id+'/cancel').set('Authorization',owner)).status,404);
+ const availability=await request(app).get('/api/shows/'+showId);assert(!availability.body.occupied.includes('A1'));
+ assert.equal((await request(app).post('/api/bookings').set('Authorization',outsider).send({showId,seats:['A1']})).status,201);
+ assert.equal((await request(app).get('/api/shows/not-an-id')).status,404);
+});
