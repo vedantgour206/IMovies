@@ -52,4 +52,5 @@ Tests use an isolated temporary MongoDB database and cover invalid registration,
 
 The occupied-seat update is atomic within the Show document. A failed booking insert releases seats as compensation. For a production system spanning multiple server processes, use MongoDB transactions for booking creation/cancellation and seat changes, add expiring seat holds, payments, monitoring, stronger operational recovery, and production security configuration before accepting real reservations.
 
-This project is saved locally and tracked in Git. No public deployment or GitHub repository has been created.
+Source repository: https://github.com/vedantgour206-netizen/IMovies. The project is tracked in Git and published on GitHub. No public application deployment has been created.
+
